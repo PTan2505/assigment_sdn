@@ -53,6 +53,10 @@ app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
+app.use("/home", require("./routes/home.routes"));
+app.use("/health-record", require("./routes/healthRecord.routes"));
+app.use("/medical-events", require("./routes/medicalEvent.routes"));
+app.use("/notifications", require("./routes/notification.routes"));
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
