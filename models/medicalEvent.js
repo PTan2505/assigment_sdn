@@ -6,12 +6,12 @@ const medicalEventSchema = new Schema(
   {
     student: {
       type: Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "User",
       required: true,
     },
     created_by: {
       type: Schema.Types.ObjectId,
-      ref: "MedicalStaff",
+      ref: "User",
       required: true,
     },
     event_type: {
@@ -47,7 +47,7 @@ const medicalEventSchema = new Schema(
         time: Date,
         administered_by: {
           type: Schema.Types.ObjectId,
-          ref: "MedicalStaff",
+          ref: "User",
         },
       },
     ],

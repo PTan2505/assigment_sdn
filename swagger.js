@@ -18,9 +18,7 @@ const options = {
         "## Registration Rules\n\n" +
         "- Only parents can register through the public `/auth/register` endpoint\n" +
         "- All other user accounts (students, medical staff, admins) must be created by an authorized admin\n" +
-        "- The system has two built-in admin roles:\n" +
-        "  - super_admin: Full system access\n" +
-        "  - student_manager: Can create students, manage student-parent relationships, and create staff accounts",
+        "- Admins have full access to manage students, parents, and medical staff",
       contact: {
         name: "School Health Management Team",
         email: "support@schoolhealth.example.com",
@@ -64,6 +62,87 @@ const options = {
         },
       },
       schemas: {
+        User: {
+          type: "object",
+          required: [
+            "username",
+            "password",
+            "role",
+            "first_name",
+            "last_name",
+            "gender",
+          ],
+          properties: {
+            _id: {
+              type: "string",
+              description: "User ID",
+              example: "60d21b4667d0d8992e610c85",
+            },
+            username: {
+              type: "string",
+              description: "Username for login",
+              example: "jsmith",
+            },
+            password: {
+              type: "string",
+              description: "Password (hashed, not returned in responses)",
+              example: "hashedpassword123",
+            },
+            role: {
+              type: "string",
+              enum: ["parent", "student", "medicalStaff", "admin"],
+              description: "Role of the user",
+              example: "parent",
+            },
+            email: {
+              type: "string",
+              description:
+                "Email address (required for all roles except student)",
+              example: "john.smith@example.com",
+            },
+            phone_number: {
+              type: "string",
+              description:
+                "Phone number (required for all roles except student)",
+              example: "123-456-7890",
+            },
+            // Student-specific fields
+            class_name: {
+              type: "string",
+              description: "Class name (required for student role)",
+              example: "5A",
+            },
+            // Medical staff-specific fields
+            staff_role: {
+              type: "string",
+              enum: ["Nurse", "Doctor", "Healthcare Assistant"],
+              description: "Specific role for medical staff",
+              example: "Nurse",
+            },
+            // Admin has no special fields
+            // All admin functionality is controlled by the 'role' field being set to 'admin'
+            is_active: {
+              type: "boolean",
+              description: "Whether the user is active",
+              example: true,
+            },
+            last_login: {
+              type: "string",
+              format: "date-time",
+              description: "Last login timestamp",
+            },
+            createdAt: {
+              type: "string",
+              format: "date-time",
+              description: "Account creation timestamp",
+            },
+            updatedAt: {
+              type: "string",
+              format: "date-time",
+              description: "Account last update timestamp",
+            },
+          },
+        },
         Person: {
           type: "object",
           required: ["first_name", "last_name", "gender"],
@@ -215,8 +294,15 @@ const options = {
                 },
                 role: {
                   type: "string",
+                  enum: ["medicalStaff"],
+                  description: "User role (must be medicalStaff)",
+                  example: "medicalStaff",
+                  default: "medicalStaff",
+                },
+                staff_role: {
+                  type: "string",
                   enum: ["Nurse", "Doctor", "Healthcare Assistant"],
-                  description: "Medical staff role",
+                  description: "Specific medical staff role",
                   example: "Nurse",
                 },
               },
@@ -236,8 +322,9 @@ const options = {
               type: "string",
               enum: ["parent"],
               description:
-                "Type of user account to create. Only 'parent' is allowed for public registration.",
+                "Type of user account to create (maps to the role field in the unified User model). Only 'parent' is allowed for public registration.",
               example: "parent",
+              default: "parent",
             },
           },
         },
@@ -552,6 +639,164 @@ const options = {
       },
     ],
     paths: {
+      "/auth/login": {
+        post: {
+          summary: "Login a user",
+          description:
+            "Authenticate a user with username and password. Returns a JWT token for subsequent API calls. The user's role is determined automatically.",
+          tags: ["Authentication"],
+          security: [], // No authentication required for login
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["username", "password"],
+                  properties: {
+                    username: {
+                      type: "string",
+                      description: "User's username",
+                      example: "parent_user",
+                    },
+                    password: {
+                      type: "string",
+                      description: "User's password",
+                      example: "SecureP@ss123",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Login successful",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: {
+                        type: "boolean",
+                        example: true,
+                      },
+                      data: {
+                        type: "object",
+                        properties: {
+                          token: {
+                            type: "string",
+                            description:
+                              "JWT token to use for authenticated requests",
+                            example:
+                              "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYxMjM0NTY3ODkwMSIsInJvbGUiOiJwYXJlbnQiLCJpYXQiOjE2MjA1MzYwMDAsImV4cCI6MTYyMDYyMjQwMH0.example-token",
+                          },
+                          user: {
+                            type: "object",
+                            properties: {
+                              _id: {
+                                type: "string",
+                                description: "User ID",
+                                example: "612345678901",
+                              },
+                              username: {
+                                type: "string",
+                                example: "parent_user",
+                              },
+                              first_name: {
+                                type: "string",
+                                example: "John",
+                              },
+                              last_name: {
+                                type: "string",
+                                example: "Doe",
+                              },
+                              email: {
+                                type: "string",
+                                example: "john.doe@example.com",
+                              },
+                              role: {
+                                type: "string",
+                                enum: [
+                                  "parent",
+                                  "student",
+                                  "medicalStaff",
+                                  "admin",
+                                ],
+                                example: "parent",
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            400: {
+              description: "Missing username or password",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: {
+                        type: "boolean",
+                        example: false,
+                      },
+                      message: {
+                        type: "string",
+                        example: "Please provide username and password",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "Invalid credentials",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: {
+                        type: "boolean",
+                        example: false,
+                      },
+                      message: {
+                        type: "string",
+                        example: "Invalid credentials",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            500: {
+              description: "Server error",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: {
+                        type: "boolean",
+                        example: false,
+                      },
+                      message: {
+                        type: "string",
+                        example: "Server error occurred",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       "/auth/register": {
         post: {
           summary: "Register a new parent user",

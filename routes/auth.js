@@ -99,7 +99,12 @@ const { authenticateAny } = require("../middleware/auth");
  *                     example: "1234567890"
  *                   role:
  *                     type: string
- *                     description: Required for medicalStaff user type
+ *                     description: User role
+ *                     enum: ["parent", "student", "medicalStaff", "admin"]
+ *                     example: "parent"
+ *                   staff_role:
+ *                     type: string
+ *                     description: Required when role is medicalStaff
  *                     enum: ["Nurse", "Doctor", "Healthcare Assistant"]
  *                     example: "Nurse"
  *                   class_name:
@@ -108,9 +113,10 @@ const { authenticateAny } = require("../middleware/auth");
  *                     example: "Class 5A"
  *               userType:
  *                 type: string
- *                 description: Type of user to create
- *                 enum: [parent, medicalStaff, student]
+ *                 description: Type of user to create (this maps to the role field in the unified User model)
+ *                 enum: ["parent"]
  *                 example: "parent"
+ *                 default: "parent"
  *     responses:
  *       201:
  *         description: User successfully registered
@@ -148,7 +154,6 @@ router.post("/register", authController.register);
  *             required:
  *               - username
  *               - password
- *               - userType
  *             properties:
  *               username:
  *                 type: string
@@ -156,10 +161,6 @@ router.post("/register", authController.register);
  *               password:
  *                 type: string
  *                 example: "SecureP@ss123"
- *               userType:
- *                 type: string
- *                 enum: [parent, medicalStaff, student]
- *                 example: "parent"
  *     responses:
  *       200:
  *         description: User successfully logged in with JWT token
@@ -168,7 +169,7 @@ router.post("/register", authController.register);
  *             schema:
  *               $ref: '#/components/schemas/LoginResponse'
  *       400:
- *         description: Missing username, password or user type
+ *         description: Missing username or password
  *         content:
  *           application/json:
  *             schema:
@@ -179,7 +180,7 @@ router.post("/register", authController.register);
  *                   example: false
  *                 message:
  *                   type: string
- *                   example: "Please provide username, password, and user type"
+ *                   example: "Please provide username and password"
  *       401:
  *         description: Invalid credentials
  *         content:

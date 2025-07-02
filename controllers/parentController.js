@@ -1,5 +1,4 @@
-const Parent = require("../models/user/parent");
-const Student = require("../models/user/student");
+const User = require("../models/user/user");
 const StudentParent = require("../models/user/studentParent");
 const HealthProfile = require("../models/healthProfile");
 const MedicineRequest = require("../models/medicineRequest");
@@ -12,6 +11,15 @@ const mongoose = require("mongoose");
 
 // Helper function to check if parent is related to student
 const validateParentStudent = async (parentId, studentId) => {
+  // First check if both IDs are valid users with correct roles
+  const parent = await User.findOne({ _id: parentId, role: "parent" });
+  const student = await User.findOne({ _id: studentId, role: "student" });
+
+  if (!parent || !student) {
+    return false;
+  }
+
+  // Then check if there is an approved relationship
   const relation = await StudentParent.findOne({
     parent: parentId,
     student: studentId,
@@ -31,8 +39,10 @@ exports.getParentProfile = async (req, res) => {
 
     // Parent should already be available in req.user
     // But we can fetch fresh data if needed
-    const parent = await Parent.findById(parentId);
-    if (!parent) {
+    // User is already authenticated and role checked via middleware
+    // No need to query again unless we need fresh data
+    const parent = req.user;
+    if (!parent || parent.role !== "parent") {
       return res
         .status(404)
         .json({ success: false, message: "Parent not found" });
@@ -86,7 +96,16 @@ exports.getStudentHealthProfile = async (req, res) => {
     const parentId = req.user._id;
     const { studentId } = req.params;
 
-    // Verify relation
+    // Verify student role first
+    const student = await User.findOne({ _id: studentId, role: "student" });
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found or ID does not belong to a student",
+      });
+    }
+
+    // Verify relation (this now also checks roles)
     const isRelated = await validateParentStudent(parentId, studentId);
     if (!isRelated) {
       return res.status(403).json({
@@ -118,7 +137,16 @@ exports.updateHealthProfile = async (req, res) => {
     const { studentId } = req.params;
     const updateData = req.body;
 
-    // Verify relation
+    // Verify student role first
+    const student = await User.findOne({ _id: studentId, role: "student" });
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found or ID does not belong to a student",
+      });
+    }
+
+    // Verify relation (this now also checks roles)
     const isRelated = await validateParentStudent(parentId, studentId);
     if (!isRelated) {
       return res.status(403).json({
@@ -171,7 +199,16 @@ exports.createMedicineRequest = async (req, res) => {
     const { studentId } = req.params;
     const { startDate, endDate, medicines } = req.body;
 
-    // Verify relation
+    // Verify student role first
+    const student = await User.findOne({ _id: studentId, role: "student" });
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found or ID does not belong to a student",
+      });
+    }
+
+    // Verify relation (this now also checks roles)
     const isRelated = await validateParentStudent(parentId, studentId);
     if (!isRelated) {
       return res.status(403).json({
@@ -295,7 +332,10 @@ exports.getCampaigns = async (req, res) => {
     const studentIds = relationships.map((rel) => rel.student);
 
     // Get active campaigns that apply to the student's class
-    const activeStudents = await Student.find({ _id: { $in: studentIds } });
+    const activeStudents = await User.find({
+      _id: { $in: studentIds },
+      role: "student",
+    });
     const classNames = activeStudents.map((s) => s.class_name);
 
     const campaigns = await Campaign.find({
@@ -356,6 +396,15 @@ exports.updateCampaignConsent = async (req, res) => {
     const { studentId, campaignId } = req.params;
     const { status, notes } = req.body;
 
+    // Verify student role first
+    const student = await User.findOne({ _id: studentId, role: "student" });
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found or ID does not belong to a student",
+      });
+    }
+
     // Verify relation
     const isRelated = await validateParentStudent(parentId, studentId);
     if (!isRelated) {
@@ -400,6 +449,15 @@ exports.getCampaignResults = async (req, res) => {
   try {
     const parentId = req.user._id;
     const { studentId } = req.params;
+
+    // Verify student role first
+    const student = await User.findOne({ _id: studentId, role: "student" });
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found or ID does not belong to a student",
+      });
+    }
 
     // Verify relation
     const isRelated = await validateParentStudent(parentId, studentId);
@@ -469,7 +527,7 @@ exports.requestStudentLink = async (req, res) => {
     }
 
     // Find student by ID
-    const student = await Student.findById(studentId);
+    const student = await User.findOne({ _id: studentId, role: "student" });
 
     if (!student) {
       return res.status(404).json({

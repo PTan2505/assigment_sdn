@@ -12,10 +12,8 @@ const swagger = require("./swagger");
 const initializeAdmin = require("./utils/initializeAdmin");
 
 // User Models
-const Student = require("./models/user/student");
+const User = require("./models/user/user");
 const StudentParent = require("./models/user/studentParent");
-const Parent = require("./models/user/parent");
-const MedicalStaff = require("./models/user/medicalStaff");
 
 // Health Models
 const HealthProfile = require("./models/healthProfile");

@@ -8,14 +8,14 @@ This document describes the main workflows and processes in the School Health Ma
 
 1. **Admin Users**
 
-   - Created by existing super_admin users only
-   - Required fields: username, password, email, role (super_admin or student_manager)
+   - Created by existing admin users only
+   - Required fields: username, password, email, first_name, last_name, gender, role="admin"
    - Admin accounts are always active by default
 
    ```mermaid
    graph LR
-       A[Super Admin] -->|Creates| B[New Admin Account]
-       B -->|Assigns Role| C[super_admin/student_manager]
+       A[Admin] -->|Creates| B[New Admin Account]
+       B -->|Sets Role| C[admin]
    ```
 
 2. **Students**
@@ -33,8 +33,8 @@ This document describes the main workflows and processes in the School Health Ma
 3. **Medical Staff**
 
    - Created by admin users only
-   - Required fields: username, password, first_name, last_name, email, phone_number, role
-   - Role must be one of: Nurse, Doctor, Healthcare Assistant
+   - Required fields: username, password, first_name, last_name, email, phone_number, role="medicalStaff", staff_role
+   - staff_role must be one of: Nurse, Doctor, Healthcare Assistant
 
    ```mermaid
    graph LR
@@ -125,33 +125,39 @@ graph TD
     B -->|If Invalid| E[Error Response]
 ```
 
+### Unified User Model
+
+The system uses a unified User model for all user types. Each user has a `role` field that determines their permissions and access level:
+
+- `admin`: Administrators with full system access
+- `medicalStaff`: Medical staff members (with additional `staff_role` field)
+- `parent`: Parents who can link to students
+- `student`: Students in the system
+
 ### Authorization Levels
 
-1. **Super Admin**
+1. **Admin**
 
    - Full system access
    - Can create all user types
    - Can manage system settings
-
-2. **Student Manager Admin**
-
    - Can create/manage students
    - Can manage student-parent relationships
    - Can create staff accounts
 
-3. **Medical Staff**
+2. **Medical Staff**
 
    - Can create/manage medical events
    - Can create/manage health campaigns
    - Can view student health records
 
-4. **Parents**
+3. **Parents**
 
    - Can view their linked students' information
    - Can request student links
    - Can respond to campaign consents
 
-5. **Students**
+4. **Students**
    - Can view their own health records
    - Limited system access
 

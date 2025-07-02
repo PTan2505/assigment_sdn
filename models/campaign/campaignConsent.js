@@ -11,12 +11,12 @@ const campaignConsentSchema = new Schema(
     },
     student: {
       type: Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "User",
       required: true,
     },
     answered_by: {
       type: Schema.Types.ObjectId,
-      ref: "Parent",
+      ref: "User",
     },
     status: {
       type: String,

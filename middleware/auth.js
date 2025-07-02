@@ -12,12 +12,10 @@ const authenticate = (allowedUserTypes = []) => {
       const authHeader = req.header("Authorization");
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return res
-          .status(401)
-          .json({
-            success: false,
-            message: "No bearer token, authorization denied",
-          });
+        return res.status(401).json({
+          success: false,
+          message: "No bearer token, authorization denied",
+        });
       }
 
       // Extract the token (remove "Bearer " prefix)
@@ -27,10 +25,10 @@ const authenticate = (allowedUserTypes = []) => {
         // Verify token
         const { user, decoded } = await authService.verifyToken(token);
 
-        // Check if user type is allowed
+        // Check if user's role is allowed
         if (
           allowedUserTypes.length > 0 &&
-          !allowedUserTypes.includes(decoded.type)
+          !allowedUserTypes.includes(user.role)
         ) {
           return res
             .status(403)
@@ -39,7 +37,7 @@ const authenticate = (allowedUserTypes = []) => {
 
         // Set user in request object
         req.user = user;
-        req.userType = decoded.type;
+        req.userType = user.role; // Use role from unified model
         next();
       } catch (err) {
         return res

@@ -25,7 +25,7 @@ class AuthController {
           "password",
           "email",
           "phone_number",
-          "role",
+          "staff_role", // Changed from 'role' to 'staff_role'
         ],
         student: ["first_name", "last_name", "class_name"],
       };
@@ -66,16 +66,16 @@ class AuthController {
    */
   async login(req, res) {
     try {
-      const { username, password, userType } = req.body;
+      const { username, password } = req.body;
 
-      if (!username || !password || !userType) {
+      if (!username || !password) {
         return res.status(400).json({
           success: false,
-          message: "Please provide username, password, and user type",
+          message: "Please provide username and password",
         });
       }
 
-      const result = await authService.login(username, password, userType);
+      const result = await authService.login(username, password);
 
       res.status(200).json({
         success: true,

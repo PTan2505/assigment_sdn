@@ -11,17 +11,17 @@ const consultationScheduleSchema = new Schema(
     },
     student: {
       type: Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "User",
       required: true,
     },
     medicalStaff: {
       type: Schema.Types.ObjectId,
-      ref: "MedicalStaff",
+      ref: "User",
       required: true,
     },
     attending_parent: {
       type: Schema.Types.ObjectId,
-      ref: "Parent",
+      ref: "User",
       required: true,
       validate: {
         validator: async function (value) {

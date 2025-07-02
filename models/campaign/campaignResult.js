@@ -10,12 +10,12 @@ const campaignResultSchema = new Schema(
     },
     created_by: {
       type: Schema.Types.ObjectId,
-      ref: "MedicalStaff",
+      ref: "User",
       required: true,
     },
     student: {
       type: Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "User",
       required: true,
     },
     notes: {

@@ -1,6 +1,5 @@
 var express = require("express");
 var router = express.Router();
-const MedicalStaff = require("../models/user/medicalStaff");
 const NurseController = require("../controllers/nurseController");
 const { authenticateMedicalStaff } = require("../middleware/auth"); // Import the JWT medical staff authentication middleware
 

@@ -1,7 +1,4 @@
-const Student = require("../models/user/student");
-const Parent = require("../models/user/parent");
-const MedicalStaff = require("../models/user/medicalStaff");
-const Admin = require("../models/user/admin");
+const User = require("../models/user/user");
 const StudentParent = require("../models/user/studentParent");
 const HealthProfile = require("../models/healthProfile");
 const bcrypt = require("bcryptjs");
@@ -40,7 +37,8 @@ class AdminController {
 
     // Keep checking until we find a unique username
     while (true) {
-      const existingUser = await Student.findOne({ username });
+      // Check the unified User model for any user with this username
+      const existingUser = await User.findOne({ username });
       if (!existingUser) {
         return username;
       }
@@ -86,12 +84,13 @@ class AdminController {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(username, salt);
 
-      // Add username and password to student data
+      // Add username, password and role to student data
       studentData.username = username;
       studentData.password = hashedPassword;
+      studentData.role = "student";
 
-      // Create new student
-      const student = new Student(studentData);
+      // Create new student using unified User model
+      const student = new User(studentData);
       await student.save();
 
       // Create empty health profile for the student
@@ -148,8 +147,15 @@ class AdminController {
         });
       }
 
-      // Create new medical staff
-      const staff = new MedicalStaff(staffData);
+      // Create new medical staff using unified User model
+      const staffData_unified = {
+        ...staffData,
+        role: "medicalStaff",
+        staff_role: staffData.role, // Map the old 'role' field to 'staff_role'
+      };
+      delete staffData_unified.role; // Remove the old role field as it's now staff_role
+
+      const staff = new User(staffData_unified);
       await staff.save();
 
       // Remove password from response
@@ -186,21 +192,21 @@ class AdminController {
         is_emergency_contact = false,
       } = req.body;
 
-      // Check if student exists
-      const student = await Student.findById(studentId);
+      // Check if student exists and has the correct role
+      const student = await User.findOne({ _id: studentId, role: "student" });
       if (!student) {
         return res.status(404).json({
           success: false,
-          message: "Student not found",
+          message: "Student not found or ID does not belong to a student",
         });
       }
 
-      // Check if parent exists
-      const parent = await Parent.findById(parentId);
+      // Check if parent exists and has the correct role
+      const parent = await User.findOne({ _id: parentId, role: "parent" });
       if (!parent) {
         return res.status(404).json({
           success: false,
-          message: "Parent not found",
+          message: "Parent not found or ID does not belong to a parent",
         });
       }
 
@@ -245,7 +251,7 @@ class AdminController {
    */
   async getStudents(req, res) {
     try {
-      const students = await Student.find();
+      const students = await User.find({ role: "student" });
 
       res.status(200).json({
         success: true,
@@ -264,7 +270,9 @@ class AdminController {
    */
   async getMedicalStaff(req, res) {
     try {
-      const staff = await MedicalStaff.find().select("-password"); // Exclude password field
+      const staff = await User.find({ role: "medicalStaff" }).select(
+        "-password"
+      ); // Exclude password field
 
       res.status(200).json({
         success: true,
@@ -381,7 +389,7 @@ class AdminController {
       const { studentId } = req.params;
       const updateData = req.body;
 
-      const student = await Student.findById(studentId);
+      const student = await User.findOne({ _id: studentId, role: "student" });
       if (!student) {
         return res.status(404).json({
           success: false,
@@ -389,7 +397,8 @@ class AdminController {
         });
       }
 
-      // Update student
+      // Update student (don't allow changing the role)
+      delete updateData.role;
       Object.assign(student, updateData);
       await student.save();
 
@@ -416,7 +425,7 @@ class AdminController {
       // Remove password from update data if present
       delete updateData.password;
 
-      const staff = await MedicalStaff.findById(staffId);
+      const staff = await User.findOne({ _id: staffId, role: "medicalStaff" });
       if (!staff) {
         return res.status(404).json({
           success: false,
@@ -424,7 +433,13 @@ class AdminController {
         });
       }
 
-      // Update staff
+      // Update staff (don't allow changing the role)
+      delete updateData.role;
+      // Map old 'role' field to 'staff_role' if present
+      if (updateData.role) {
+        updateData.staff_role = updateData.role;
+        delete updateData.role;
+      }
       Object.assign(staff, updateData);
       await staff.save();
 
@@ -451,7 +466,7 @@ class AdminController {
     try {
       const { studentId } = req.params;
 
-      const student = await Student.findById(studentId);
+      const student = await User.findOne({ _id: studentId, role: "student" });
       if (!student) {
         return res.status(404).json({
           success: false,
@@ -481,7 +496,7 @@ class AdminController {
     try {
       const { staffId } = req.params;
 
-      const staff = await MedicalStaff.findById(staffId);
+      const staff = await User.findOne({ _id: staffId, role: "medicalStaff" });
       if (!staff) {
         return res.status(404).json({
           success: false,

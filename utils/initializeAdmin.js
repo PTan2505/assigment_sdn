@@ -1,10 +1,13 @@
 const bcrypt = require("bcryptjs");
-const Admin = require("../models/user/admin");
+const User = require("../models/user/user");
 
 async function initializeAdmin() {
   try {
     // Check if admin already exists
-    const existingAdmin = await Admin.findOne({ username: "admin" });
+    const existingAdmin = await User.findOne({
+      username: "admin",
+      role: "admin",
+    });
     if (existingAdmin) {
       console.log("✅ Admin manager already exists");
       return;
@@ -13,7 +16,7 @@ async function initializeAdmin() {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash("admin", salt);
 
-    const adminManager = new Admin({
+    const adminManager = new User({
       username: "admin",
       password: hashedPassword,
       first_name: "Admin",
@@ -22,13 +25,7 @@ async function initializeAdmin() {
       phone_number: "123-456-7890",
       gender: "other",
       dateOfBirth: new Date("1990-01-01"),
-      role: "student_manager",
-      permissions: {
-        create_student: true,
-        manage_student_parent: true,
-        create_staff: true,
-        manage_system: false,
-      },
+      role: "admin",
     });
 
     await adminManager.save();

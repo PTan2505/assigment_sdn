@@ -1,5 +1,4 @@
-const Student = require("../models/user/student");
-const MedicalStaff = require("../models/user/medicalStaff");
+const User = require("../models/user/user");
 const HealthProfile = require("../models/healthProfile");
 const MedicalEvent = require("../models/medicalEvent");
 const MedicineRequest = require("../models/medicineRequest");
@@ -8,8 +7,13 @@ const CampaignResult = require("../models/campaign/campaignResult");
 const CampaignConsent = require("../models/campaign/campaignConsent");
 const ConsultationSchedule = require("../models/campaign/consultationSchedule");
 const { CAMPAIGN_TYPE, CAMPAIGN_CONSENT_STATUS } = require("../utils/enums");
-const Parent = require("../models/user/parent");
 const StudentParent = require("../models/user/studentParent");
+
+// Helper function to validate a student ID
+const validateStudentRole = async (studentId) => {
+  if (!studentId) return null;
+  return await User.findOne({ _id: studentId, role: "student" });
+};
 
 class NurseController {
   // Dashboard
@@ -75,6 +79,14 @@ class NurseController {
         follow_up_notes = "",
       } = req.body;
 
+      // Validate that studentId corresponds to a user with student role
+      const student = await User.findOne({ _id: studentId, role: "student" });
+      if (!student) {
+        return res.status(404).json({
+          error: "Student not found or invalid student ID",
+        });
+      }
+
       const medicalEvent = new MedicalEvent({
         student: studentId,
         created_by: req.user._id,
@@ -127,6 +139,23 @@ class NurseController {
   // Update a medical event
   static async updateMedicalEvent(req, res, next) {
     try {
+      // First find the event to verify student's role before update
+      const existingEvent = await MedicalEvent.findById(req.params.eventId);
+      if (!existingEvent) {
+        return res.status(404).json({ error: "Medical event not found" });
+      }
+
+      // Verify the student role
+      const student = await User.findOne({
+        _id: existingEvent.student,
+        role: "student",
+      });
+      if (!student) {
+        return res.status(404).json({
+          error: "Student record is invalid or has been removed",
+        });
+      }
+
       const {
         event_type,
         description,
@@ -155,10 +184,6 @@ class NurseController {
         updateData,
         { new: true }
       ).populate("student", "first_name last_name class_name");
-
-      if (!medicalEvent) {
-        return res.status(404).json({ error: "Medical event not found" });
-      }
 
       res.json(medicalEvent);
     } catch (error) {
@@ -335,6 +360,14 @@ class NurseController {
     try {
       const { studentId, notes } = req.body;
 
+      // Validate student role
+      const student = await validateStudentRole(studentId);
+      if (!student) {
+        return res.status(404).json({
+          error: "Student not found or ID does not belong to a student",
+        });
+      }
+
       const result = new CampaignResult({
         campaign: req.params.campaignId,
         student: studentId,
@@ -400,6 +433,14 @@ class NurseController {
     try {
       const { studentId, checkupDetails, notes } = req.body;
 
+      // Validate student role
+      const student = await validateStudentRole(studentId);
+      if (!student) {
+        return res.status(404).json({
+          error: "Student not found or ID does not belong to a student",
+        });
+      }
+
       const result = new CampaignResult({
         campaign: req.params.campaignId,
         student: studentId,
@@ -451,7 +492,10 @@ class NurseController {
         query.class_name = class_name;
       }
 
-      const students = await Student.find(query)
+      const students = await User.find({
+        ...query,
+        role: "student",
+      })
         .sort({ last_name: 1, first_name: 1 })
         .limit(100);
 
@@ -463,8 +507,18 @@ class NurseController {
 
   static async getStudentHealthProfile(req, res, next) {
     try {
+      const studentId = req.params.studentId;
+
+      // Validate student role
+      const student = await validateStudentRole(studentId);
+      if (!student) {
+        return res.status(404).json({
+          error: "Student not found or ID does not belong to a student",
+        });
+      }
+
       const healthProfile = await HealthProfile.findOne({
-        student: req.params.studentId,
+        student: studentId,
       }).populate(
         "student",
         "first_name last_name class_name dateOfBirth gender"
@@ -483,9 +537,18 @@ class NurseController {
   static async updateStudentHealthProfile(req, res, next) {
     try {
       const updateData = req.body;
+      const studentId = req.params.studentId;
+
+      // Validate student role
+      const student = await validateStudentRole(studentId);
+      if (!student) {
+        return res.status(404).json({
+          error: "Student not found or ID does not belong to a student",
+        });
+      }
 
       const healthProfile = await HealthProfile.findOneAndUpdate(
-        { student: req.params.studentId },
+        { student: studentId },
         updateData,
         {
           new: true,
@@ -501,20 +564,30 @@ class NurseController {
 
   static async getStudentMedicalHistory(req, res, next) {
     try {
+      const studentId = req.params.studentId;
+
+      // Validate student role
+      const student = await validateStudentRole(studentId);
+      if (!student) {
+        return res.status(404).json({
+          error: "Student not found or ID does not belong to a student",
+        });
+      }
+
       const medicalEvents = await MedicalEvent.find({
-        student: req.params.studentId,
+        student: studentId,
       })
         .populate("created_by", "first_name last_name role")
         .sort({ createdAt: -1 });
 
       const medicineRequests = await MedicineRequest.find({
-        student: req.params.studentId,
+        student: studentId,
       })
         .populate("created_by", "first_name last_name")
         .sort({ createdAt: -1 });
 
       const campaignResults = await CampaignResult.find({
-        student: req.params.studentId,
+        student: studentId,
       })
         .populate("campaign", "title type date")
         .populate("created_by", "first_name last_name")

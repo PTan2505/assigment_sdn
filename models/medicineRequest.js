@@ -5,12 +5,12 @@ const medicineRequestSchema = new Schema(
   {
     student: {
       type: Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "User",
       required: true,
     },
     created_by: {
       type: Schema.Types.ObjectId,
-      ref: "Parent",
+      ref: "User",
       required: true,
     },
     startDate: {

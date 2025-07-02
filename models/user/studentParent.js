@@ -5,12 +5,12 @@ const studentParentSchema = new Schema(
   {
     student: {
       type: Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "User",
       required: true,
     },
     parent: {
       type: Schema.Types.ObjectId,
-      ref: "Parent",
+      ref: "User",
       required: true,
     },
     relationship: {
@@ -38,7 +38,7 @@ const studentParentSchema = new Schema(
     },
     processed_by: {
       type: Schema.Types.ObjectId,
-      ref: "MedicalStaff", // Reference to staff who processed the request
+      ref: "User", // Reference to staff who processed the request
     },
     processed_at: {
       type: Date, // When the request was processed
